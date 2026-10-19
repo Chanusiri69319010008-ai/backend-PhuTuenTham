@@ -1,39 +1,57 @@
+
 const express = require('express');
 const app = express();
 
-app.get('/hello', (req, res) => {
-    res.json({ message: 'สวัสดี Back-End!' });
-});
-//GET /project
+app.use(express.json());
 
+// =========================
+// GET /hello
+// =========================
+app.get('/hello', (req, res) => {
+  res.json({ message: 'สวัสดี Back-End!' });
+});
+
+// =========================
+// ข้อมูลสมาชิกและโครงการ
+// =========================
 const members = [
-  { id: 1, name: 'น.ส.ชนันสิริ กุลนิษฐ์', role: 'Developer A (API และโค้ดฝั่ง Server)' },
-  { id: 2, name: 'น.ส.ปนิตา งอกชัยภูมิ', role: 'Developer B (ฐานข้อมูล ทดสอบ เอกสาร)' },
+  { id: 1, name: 'ปนิตา งอกชัยภูมิ', role: 'Dev B' },
+  { id: 2, name: 'ชนันสิริ กุลนิษฐ์', role: 'Dev A' }
 ];
 
 const project = {
   team: 'ผู้ตื่นธรรม',
-  topic: 'ระบบแจ้งปัญหาห้องน้ำตึก  A',
+  topic: 'ระบบแจ้งปัญหาห้องน้ำตึก A',
   problem: 'ห้องน้ำชำรุด ไม่ได้รับการแก้ไข หรือได้รับการแก้ไขล่าช้า',
   users: ['นักเรียน/นักศึกษา', 'เจ้าหน้าที่อาคารสถานที่'],
-  members: members,
+  members
 };
 
+// GET /project
 app.get('/project', (req, res) => {
   res.json(project);
 });
 
+// GET /members
+app.get('/members', (req, res) => {
+  res.json(members);
+});
+
+// GET /members/:id
 app.get('/members/:id', (req, res) => {
   const id = Number(req.params.id);
   const member = members.find((m) => m.id === id);
 
-  if (!member) {
+  if (!Number.isInteger(id) || !member) {
     return res.status(404).json({ message: 'ไม่พบข้อมูลสมาชิก' });
   }
 
   res.json(member);
 });
 
+// =========================
+// GET /ideas
+// =========================
 const ideas = [
   {
     method: 'POST',
@@ -56,15 +74,135 @@ app.get('/ideas', (req, res) => {
   res.json(ideas);
 });
 
-const member = [
-    { id: 1, name: 'ปนิตา งอกชัยภูมิ', std_id: '018' },
-    { id: 2, name: 'ชนันสิริ กุลนิษฐ์', std_id: '008' }
+// =========================
+// ข้อมูลผู้ใช้งาน
+// =========================
+let users = [
+  {
+    id: 1,
+    name: 'ภริตา งามหน้า',
+    departments: 'เทคโนโลยีสารสนเทศ',
+    level: '2'
+  },
+  {
+    id: 2,
+    name: 'ลิลา จันทร์สวัสดิ์',
+    departments: 'เทคนิคคอมพิวเตอร์',
+    level: '3'
+  }
 ];
 
-app.get('/members', (req, res) => {
-    res.json(member);
+let nextId = 3;
+
+// ตรวจสอบ ID
+function findUserById(id) {
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return users.find((u) => u.id === id) || null;
+}
+
+// GET /users หรือ GET /users?name=ชื่อ
+app.get('/users', (req, res) => {
+  const { name } = req.query;
+
+  if (name !== undefined) {
+    return res.json(users.filter((u) => u.name === name));
+  }
+
+  res.json(users);
+});
+
+// GET /users/:id
+app.get('/users/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const user = findUserById(id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'ไม่พบผู้ใช้งาน' });
+  }
+
+  res.json(user);
+});
+
+// POST /users
+app.post('/users', (req, res) => {
+  const { name, departments, level } = req.body;
+
+  if (
+    typeof name !== 'string' || !name.trim() ||
+    typeof departments !== 'string' || !departments.trim() ||
+    level === undefined || level === null || String(level).trim() === ''
+  ) {
+    return res.status(400).json({
+      message: 'ต้องส่ง name, departments และ level ให้ครบ'
+    });
+  }
+
+  const user = {
+    id: nextId++,
+    name: name.trim(),
+    departments: departments.trim(),
+    level: String(level)
+  };
+
+  users.push(user);
+
+  res.status(201).json(user);
+});
+
+// PUT /users/:id
+app.put('/users/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const user = findUserById(id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'ไม่พบผู้ใช้งาน' });
+  }
+
+  const { name, departments, level } = req.body;
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ message: 'name ต้องเป็นข้อความที่ไม่ว่าง' });
+    }
+    user.name = name.trim();
+  }
+
+  if (departments !== undefined) {
+    if (typeof departments !== 'string' || !departments.trim()) {
+      return res.status(400).json({
+        message: 'departments ต้องเป็นข้อความที่ไม่ว่าง'
+      });
+    }
+    user.departments = departments.trim();
+  }
+
+  if (level !== undefined) {
+    if (level === null || String(level).trim() === '') {
+      return res.status(400).json({ message: 'level ห้ามเป็นค่าว่าง' });
+    }
+    user.level = String(level);
+  }
+
+  res.json(user);
+});
+
+// DELETE /users/:id
+app.delete('/users/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const index = users.findIndex((u) => u.id === id);
+
+  if (!Number.isInteger(id) || index === -1) {
+    return res.status(404).json({ message: 'ไม่พบผู้ใช้งาน' });
+  }
+
+  users.splice(index, 1);
+
+  res.status(204).send();
 });
 
 app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+  console.log('Server running on http://localhost:3000');
 });
