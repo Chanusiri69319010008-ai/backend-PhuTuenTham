@@ -4,16 +4,13 @@ const app = express();
 
 app.use(express.json());
 
-// =========================
-// GET /hello
-// =========================
+
+
 app.get('/hello', (req, res) => {
   res.json({ message: 'สวัสดี Back-End!' });
 });
 
-// =========================
-// ข้อมูลสมาชิกและโครงการ
-// =========================
+
 const members = [
   { id: 1, name: 'ปนิตา งอกชัยภูมิ', role: 'Dev B' },
   { id: 2, name: 'ชนันสิริ กุลนิษฐ์', role: 'Dev A' }
@@ -27,17 +24,14 @@ const project = {
   members
 };
 
-// GET /project
 app.get('/project', (req, res) => {
   res.json(project);
 });
 
-// GET /members
 app.get('/members', (req, res) => {
   res.json(members);
 });
 
-// GET /members/:id
 app.get('/members/:id', (req, res) => {
   const id = Number(req.params.id);
   const member = members.find((m) => m.id === id);
@@ -49,9 +43,7 @@ app.get('/members/:id', (req, res) => {
   res.json(member);
 });
 
-// =========================
-// GET /ideas
-// =========================
+
 const ideas = [
   {
     method: 'POST',
@@ -74,9 +66,7 @@ app.get('/ideas', (req, res) => {
   res.json(ideas);
 });
 
-// =========================
-// ข้อมูลผู้ใช้งาน
-// =========================
+
 let users = [
   {
     id: 1,
@@ -94,7 +84,6 @@ let users = [
 
 let nextId = 3;
 
-// ตรวจสอบ ID
 function findUserById(id) {
   if (!Number.isInteger(id) || id <= 0) {
     return null;
@@ -103,7 +92,6 @@ function findUserById(id) {
   return users.find((u) => u.id === id) || null;
 }
 
-// GET /users หรือ GET /users?name=ชื่อ
 app.get('/users', (req, res) => {
   const { name } = req.query;
 
@@ -114,7 +102,6 @@ app.get('/users', (req, res) => {
   res.json(users);
 });
 
-// GET /users/:id
 app.get('/users/:id', (req, res) => {
   const id = Number(req.params.id);
   const user = findUserById(id);
@@ -126,7 +113,6 @@ app.get('/users/:id', (req, res) => {
   res.json(user);
 });
 
-// POST /users
 app.post('/users', (req, res) => {
   const { name, departments, level } = req.body;
 
@@ -152,7 +138,6 @@ app.post('/users', (req, res) => {
   res.status(201).json(user);
 });
 
-// PUT /users/:id
 app.put('/users/:id', (req, res) => {
   const id = Number(req.params.id);
   const user = findUserById(id);
@@ -189,7 +174,6 @@ app.put('/users/:id', (req, res) => {
   res.json(user);
 });
 
-// DELETE /users/:id
 app.delete('/users/:id', (req, res) => {
   const id = Number(req.params.id);
   const index = users.findIndex((u) => u.id === id);
@@ -201,6 +185,90 @@ app.delete('/users/:id', (req, res) => {
   users.splice(index, 1);
 
   res.status(204).send();
+});
+
+
+let reports = [
+  { id: 1, title: 'ชักโครกกดน้ำไม่ลง', location: 'ห้องน้ำชาย ชั้น 1', status: 'pending' },
+  { id: 2, title: 'ก๊อกน้ำอ่างล้างมือชำรุด', location: 'ห้องน้ำหญิง ชั้น 2', status: 'done' },
+];
+let nextId = 3;
+
+
+app.get('/reports', (req, res) => {
+  const { status } = req.query;
+  if (status) {
+    return res.json(reports.filter((r) => r.status === status));
+  }
+  res.json(reports);
+});
+
+app.get('/reports/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const report = reports.find((r) => r.id === id);
+  if (!report) {
+    return res.status(404).json({ message: 'ไม่พบรายการแจ้งปัญหา' });
+  }
+  res.json(report);
+});
+
+app.post('/reports', (req, res) => {
+  const { title, location } = req.body;
+
+  if (!title || !location) {
+    return res.status(400).json({
+      message: 'กรุณาระบุรายละเอียดปัญหาและสถานที่'
+    });
+  }
+
+  const report = {
+    id: nextId++,
+    title,
+    location,
+    status: 'pending'
+  };
+
+  reports.push(report);
+  res.status(201).json(report);
+});
+
+app.put('/reports/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const report = reports.find((r) => r.id === id);
+
+  if (!report) {
+    return res.status(404).json({
+      message: 'ไม่พบคำร้องแจ้งปัญหา'
+    });
+  }
+
+  const allowed = ['pending', 'doing', 'done'];
+
+  if (req.body.status && !allowed.includes(req.body.status)) {
+    return res.status(400).json({
+      message: 'status ต้องเป็น pending, doing หรือ done'
+    });
+  }
+
+  report.title = req.body.title ?? report.title;
+  report.location = req.body.location ?? report.location;
+  report.status = req.body.status ?? report.status;
+
+  res.json(report);
+});
+
+app.delete('/reports/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const index = reports.findIndex((r) => r.id === id);
+  if (index === -1) {
+    return res.status(404).json({ message: 'ไม่พบรายการแจ้งปัญหา' });
+  }
+  reports.splice(index, 1);
+  res.status(204).send();
+});
+ 
+app.use((req, res) => {
+  res.status(404).json({ message: `ไม่มี ${req.method} ${req.path} ในระบบ` });
 });
 
 app.listen(3000, () => {
